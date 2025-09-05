@@ -10,7 +10,10 @@ dotenv.config();
 
 // Menggunakan middleware untuk mem-parsing body JSON
 app.use(express.json());
-
+// Endpoint root untuk mengecek status server
+app.get('/', (req, res) => {
+    res.status(200).send('Server berjalan dengan sukses.');
+});
 // Token BotFather kamu
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
