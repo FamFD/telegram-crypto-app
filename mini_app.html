@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini App Penukaran</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 400px;
+            padding: 2rem;
+            background-color: var(--tg-theme-secondary-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .input-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--tg-theme-text-color);
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .info-box {
+            padding: 1rem;
+            background-color: rgba(0, 136, 204, 0.1);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        button:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-2xl font-bold mb-4">Penukaran Crypto ke Rupiah</h1>
+        <p class="mb-6">Tukar aset digital Anda dengan mudah dan aman.</p>
+        
+        <div class="input-group">
+            <label for="rupiah-input">Jumlah Rupiah yang Anda Inginkan</label>
+            <input type="number" id="rupiah-input" placeholder="Contoh: 1000000" class="shadow-sm">
+        </div>
+        
+        <div class="info-box">
+            <p>Anda perlu membayar: <span id="crypto-amount" class="font-bold">0.00</span> TON</p>
+        </div>
+        
+        <button id="pay-button" disabled>Bayar dengan Telegram Wallet</button>
+    </div>
+
+    <script>
+        // Memastikan Telegram Web App siap
+        Telegram.WebApp.ready();
+
+        const rupiahInput = document.getElementById('rupiah-input');
+        const cryptoAmountSpan = document.getElementById('crypto-amount');
+        const payButton = document.getElementById('pay-button');
+
+        // URL SERVER KAMU
+        const serverUrl = 'http://13month-56704.portmap.host:56704';
+
+        // Mengatur exchange rate placeholder
+        const exchangeRate = 0.000005; // 1 Rupiah = 0.000005 TON
+
+        rupiahInput.addEventListener('input', () => {
+            const rupiah = parseFloat(rupiahInput.value);
+            if (!isNaN(rupiah) && rupiah > 0) {
+                const cryptoAmount = rupiah * exchangeRate;
+                cryptoAmountSpan.textContent = cryptoAmount.toFixed(6);
+                payButton.disabled = false;
+            } else {
+                cryptoAmountSpan.textContent = '0.00';
+                payButton.disabled = true;
+            }
+        });
+
+        payButton.addEventListener('click', async () => {
+            const rupiah = parseFloat(rupiahInput.value);
+            const cryptoAmount = parseFloat(cryptoAmountSpan.textContent);
+
+            if (isNaN(rupiah) || rupiah <= 0) {
+                return Telegram.WebApp.showAlert('Harap masukkan jumlah Rupiah yang valid.');
+            }
+
+            try {
+                // Memanggil server kamu untuk membuat invoice
+                const response = await fetch(`${serverUrl}/createInvoice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: Math.round(cryptoAmount * 100), // Telegram menggunakan satuan terkecil (contoh: sen)
+                        currency: 'XTR', // Placeholder mata uang
+                        description: `Pembayaran untuk ${rupiah} Rupiah`
+                    })
+                });
+
+                const data = await response.json();
+                if (data.invoiceUrl) {
+                    // Membuka jendela pembayaran Telegram Wallet
+                    Telegram.WebApp.openInvoice(data.invoiceUrl, (status) => {
+                        if (status === 'paid') {
+                            Telegram.WebApp.showAlert('Pembayaran berhasil! Silakan tunggu konfirmasi transfer Rupiah.');
+                        } else {
+                            Telegram.WebApp.showAlert('Pembayaran dibatalkan atau gagal. Silakan coba lagi.');
+                        }
+                    });
+                } else {
+                    Telegram.WebApp.showAlert('Gagal mendapatkan link pembayaran.');
+                }
+            } catch (error) {
+                console.error('Error saat memanggil server:', error);
+                Telegram.WebApp.showAlert('Terjadi kesalahan. Silakan coba lagi nanti.');
+            }
+        });
+    </script>
+</body>
+</html>
