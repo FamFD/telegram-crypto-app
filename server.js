@@ -17,6 +17,10 @@ app.use(express.json());
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN;
 
+// Tambahkan baris log ini untuk debugging
+console.log('BOT_TOKEN is set:', !!BOT_TOKEN);
+console.log('PAYMENT_PROVIDER_TOKEN is set:', !!PAYMENT_PROVIDER_TOKEN);
+
 // Endpoint root untuk mengecek status server
 app.get('/', (req, res) => {
     res.status(200).send('Server berjalan dengan sukses.');
