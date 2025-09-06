@@ -61,6 +61,9 @@ app.post('/createInvoice', async (req, res) => {
 
         const response = await axios.post(url, telegramPayload);
         
+        // Tambahkan baris log ini untuk debugging
+        console.log('Respons dari Telegram:', response.data);
+
         const invoiceUrl = response.data.result;
         res.json({ invoiceUrl });
 
