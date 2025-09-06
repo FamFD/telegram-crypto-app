@@ -15,8 +15,8 @@ app.use(express.json());
 
 // Token BotFather kamu dan token penyedia pembayaran
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const PAYMENT_PROVIDER_TOKEN = "6073714100:TEST:TG_z39a8DqxTzNXm7I0BrHgK70A"; // Token Ammerpay
-const INVOICE_CURRENCY = 'XTR'; // Mata uang untuk invoice (contoh: XTR, TON, USDT)
+const PAYMENT_PROVIDER_TOKEN = "381764672:TEST:33550"; // Menggunakan token Stripe untuk pengujian
+const INVOICE_CURRENCY = 'XTR'; // Mata uang untuk invoice (Telegram Test Coin)
 
 // Tambahkan baris log ini untuk debugging
 console.log('BOT_TOKEN is set:', !!BOT_TOKEN);
