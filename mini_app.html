@@ -65,6 +65,23 @@
             opacity: 0.8;
             transform: translateY(-2px);
         }
+        .bank-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid var(--tg-theme-text-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .bank-option.selected {
+            background-color: rgba(0, 136, 204, 0.2);
+        }
+        .bank-icon {
+            width: 24px;
+            height: 24px;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +98,35 @@
             <p>Anda perlu membayar: <span id="crypto-amount" class="font-bold">0.00</span> TON</p>
         </div>
         
+        <!-- Pilihan bank dengan ikon -->
+        <div class="input-group">
+            <label>Pilih Bank</label>
+            <div class="flex flex-col space-y-2" id="bank-options">
+                <div class="bank-option" data-bank="BRI" data-digits="15">
+                    <img src="https://placehold.co/24x24/FFFFFF/000000?text=BRI" alt="BRI" class="bank-icon">
+                    <span>Bank Rakyat Indonesia (BRI)</span>
+                </div>
+                <div class="bank-option" data-bank="BCA" data-digits="10">
+                    <img src="https://placehold.co/24x24/FFFFFF/000000?text=BCA" alt="BCA" class="bank-icon">
+                    <span>Bank Central Asia (BCA)</span>
+                </div>
+                <div class="bank-option" data-bank="BNI" data-digits="16">
+                    <img src="https://placehold.co/24x24/FFFFFF/000000?text=BNI" alt="BNI" class="bank-icon">
+                    <span>Bank Negara Indonesia (BNI)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label for="bank-account-input">Nomor Rekening Bank</label>
+            <input type="text" id="bank-account-input" placeholder="Pilih bank terlebih dahulu" class="shadow-sm" disabled>
+        </div>
+        
+        <div class="input-group">
+            <label for="account-name-input">Nama Pemilik Rekening</label>
+            <input type="text" id="account-name-input" placeholder="Contoh: John Doe" class="shadow-sm">
+        </div>
+        
         <button id="pay-button" disabled>Bayar dengan Telegram Wallet</button>
     </div>
 
@@ -90,6 +136,9 @@
 
         const rupiahInput = document.getElementById('rupiah-input');
         const cryptoAmountSpan = document.getElementById('crypto-amount');
+        const bankOptionsDiv = document.getElementById('bank-options');
+        const bankAccountInput = document.getElementById('bank-account-input');
+        const accountNameInput = document.getElementById('account-name-input');
         const payButton = document.getElementById('pay-button');
 
         // URL SERVER KAMU
@@ -97,25 +146,70 @@
 
         // Mengatur exchange rate placeholder
         const exchangeRate = 0.000005; // 1 Rupiah = 0.000005 TON
+        let selectedBank = null;
+        let requiredDigits = 0;
 
         rupiahInput.addEventListener('input', () => {
             const rupiah = parseFloat(rupiahInput.value);
             if (!isNaN(rupiah) && rupiah > 0) {
                 const cryptoAmount = rupiah * exchangeRate;
                 cryptoAmountSpan.textContent = cryptoAmount.toFixed(6);
-                payButton.disabled = false;
+                checkButtonStatus();
             } else {
                 cryptoAmountSpan.textContent = '0.00';
-                payButton.disabled = true;
+                checkButtonStatus();
             }
         });
 
+        bankOptionsDiv.addEventListener('click', (event) => {
+            const selectedOption = event.target.closest('.bank-option');
+            if (selectedOption) {
+                // Menghapus pilihan sebelumnya
+                document.querySelectorAll('.bank-option').forEach(option => {
+                    option.classList.remove('selected');
+                });
+                // Menambahkan kelas 'selected' ke pilihan baru
+                selectedOption.classList.add('selected');
+                selectedBank = selectedOption.dataset.bank;
+                requiredDigits = parseInt(selectedOption.dataset.digits);
+                
+                bankAccountInput.disabled = false;
+                bankAccountInput.placeholder = `Masukkan ${requiredDigits} digit nomor rekening ${selectedBank}`;
+                bankAccountInput.maxLength = requiredDigits;
+                checkButtonStatus();
+            }
+        });
+
+        [rupiahInput, bankAccountInput, accountNameInput].forEach(input => {
+            input.addEventListener('input', checkButtonStatus);
+        });
+
+        function checkButtonStatus() {
+            const rupiah = parseFloat(rupiahInput.value);
+            const bankAccount = bankAccountInput.value;
+            const accountName = accountNameInput.value;
+
+            if (rupiah > 0 && selectedBank && bankAccount.length === requiredDigits && accountName.length > 0) {
+                payButton.disabled = false;
+            } else {
+                payButton.disabled = true;
+            }
+        }
+        
         payButton.addEventListener('click', async () => {
             const rupiah = parseFloat(rupiahInput.value);
             const cryptoAmount = parseFloat(cryptoAmountSpan.textContent);
+            const bankAccount = bankAccountInput.value;
+            const accountName = accountNameInput.value;
 
             if (isNaN(rupiah) || rupiah <= 0) {
                 return Telegram.WebApp.showAlert('Harap masukkan jumlah Rupiah yang valid.');
+            }
+            if (!bankAccount || bankAccount.length !== requiredDigits || !selectedBank) {
+                return Telegram.WebApp.showAlert(`Nomor rekening ${selectedBank} harus ${requiredDigits} digit.`);
+            }
+            if (!accountName) {
+                return Telegram.WebApp.showAlert('Harap isi nama pemilik rekening.');
             }
 
             try {
@@ -128,7 +222,12 @@
                     body: JSON.stringify({
                         amount: Math.round(cryptoAmount * 100), // Telegram menggunakan satuan terkecil (contoh: sen)
                         currency: 'XTR', // Placeholder mata uang
-                        description: `Pembayaran untuk ${rupiah} Rupiah`
+                        description: `Pembayaran untuk ${rupiah} Rupiah`,
+                        bankDetails: {
+                            bankName: selectedBank,
+                            accountNumber: bankAccount,
+                            accountName: accountName
+                        }
                     })
                 });
 
