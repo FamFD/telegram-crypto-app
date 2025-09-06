@@ -15,12 +15,10 @@ app.use(express.json());
 
 // Token BotFather kamu dan token penyedia pembayaran
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const PAYMENT_PROVIDER_TOKEN = "381764672:TEST:33550"; // Menggunakan token Stripe untuk pengujian
-const INVOICE_CURRENCY = 'XTR'; // Mata uang untuk invoice (Telegram Test Coin)
+const INVOICE_CURRENCY = 'TON'; // Mata uang untuk invoice (Telegram Open Network)
 
 // Tambahkan baris log ini untuk debugging
 console.log('BOT_TOKEN is set:', !!BOT_TOKEN);
-console.log('PAYMENT_PROVIDER_TOKEN is set:', !!PAYMENT_PROVIDER_TOKEN);
 
 // Endpoint root untuk mengecek status server
 app.get('/', (req, res) => {
@@ -54,7 +52,6 @@ app.post('/createInvoice', async (req, res) => {
             title: invoiceTitle,
             description: description,
             payload: invoicePayload, // Menggunakan payload yang lebih rinci
-            provider_token: PAYMENT_PROVIDER_TOKEN,
             currency: INVOICE_CURRENCY,
             prices: [{ label: 'Jumlah', amount: amount }]
         };
