@@ -15,7 +15,8 @@ app.use(express.json());
 
 // Token BotFather kamu dan token penyedia pembayaran
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN;
+const PAYMENT_PROVIDER_TOKEN = "6073714100:TEST:TG_z39a8DqxTzNXm7I0BrHgK70A"; // Token Ammerpay
+const INVOICE_CURRENCY = 'XTR'; // Mata uang untuk invoice (contoh: XTR, TON, USDT)
 
 // Tambahkan baris log ini untuk debugging
 console.log('BOT_TOKEN is set:', !!BOT_TOKEN);
@@ -29,7 +30,7 @@ app.get('/', (req, res) => {
 // Endpoint untuk Mini App membuat invoice
 app.post('/createInvoice', async (req, res) => {
     try {
-        const { amount, currency, description, bankDetails } = req.body;
+        const { amount, description, bankDetails } = req.body;
         
         // Payload unik untuk melacak transaksi.
         // Kita gabungkan dengan bankDetails agar mudah dilacak saat webhook diterima.
@@ -54,7 +55,7 @@ app.post('/createInvoice', async (req, res) => {
             description: description,
             payload: invoicePayload, // Menggunakan payload yang lebih rinci
             provider_token: PAYMENT_PROVIDER_TOKEN,
-            currency: currency,
+            currency: INVOICE_CURRENCY,
             prices: [{ label: 'Jumlah', amount: amount }]
         };
 
