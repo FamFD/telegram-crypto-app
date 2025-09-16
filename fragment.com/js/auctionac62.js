@@ -1,8 +1,8 @@
 
 var Main = {
-  CHECK_PERIOD: 400,
-  UPDATE_PERIOD: 1200,
-  FORCE_UPDATE_PERIOD: 5000,
+  CHECK_PERIOD: 40000,
+  UPDATE_PERIOD: 120000,
+  FORCE_UPDATE_PERIOD: 500000,
   init: function() {
     Aj.onLoad(function(state) {
       var cont = Aj.ajContainer;
