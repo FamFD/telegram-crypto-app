@@ -887,7 +887,7 @@ var Wallet = {
       var tonConnectUI = Aj.globalState.tonConnectUI;
       if (!tonConnectUI) {
         tonConnectUI = Aj.globalState.tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-          manifestUrl: location.origin + '/tonconnect-manifest.json',
+          manifestUrl: location.origin + '/telegram-mini-app/tonconnect-manifest.json',
           actionsConfiguration: {
             modals: ['before'],
             notifications: [],

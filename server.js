@@ -1,100 +1,88 @@
 const express = require('express');
-const axios = require('axios');
-const dotenv = require('dotenv');
 const crypto = require('crypto');
-
-// Memuat variabel lingkungan dari file .env (hanya untuk pengembangan lokal)
-// Di Vercel, variabel ini akan diatur di dashboard
-dotenv.config();
-
+const dotenv = require('dotenv');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Menggunakan middleware untuk mem-parsing body JSON
+// Memuat variabel lingkungan dari file .env
+dotenv.config();
+
 app.use(express.json());
 
-// Token BotFather kamu dan token penyedia pembayaran
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const INVOICE_CURRENCY = 'TON'; // Mata uang untuk invoice (Telegram Open Network)
+// Variabel lingkungan
+const TON_WALLET_ADDRESS = process.env.TON_WALLET_ADDRESS; // Alamat TON untuk menerima pembayaran
+const BOT_TOKEN = process.env.BOT_TOKEN; // Untuk validasi initData (opsional)
 
-// Tambahkan baris log ini untuk debugging
-console.log('BOT_TOKEN is set:', !!BOT_TOKEN);
+// Fungsi untuk memvalidasi initData dari Telegram
+function validateInitData(initData, botToken) {
+    const dataCheckString = Object.keys(initData).sort()
+        .filter(k => k !== 'hash')
+        .map(k => `${k}=${initData[k]}`).join('\n');
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+    const hash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    return hash === initData.hash;
+}
 
 // Endpoint root untuk mengecek status server
 app.get('/', (req, res) => {
     res.status(200).send('Server berjalan dengan sukses.');
 });
 
-// Endpoint untuk Mini App membuat invoice
-app.post('/createInvoice', async (req, res) => {
+// Endpoint untuk membuat transaksi TON
+app.post('/api/createInvoice', (req, res) => {
     try {
-        const { amount, description, bankDetails } = req.body;
-        
-        // Payload unik untuk melacak transaksi.
-        // Kita gabungkan dengan bankDetails agar mudah dilacak saat webhook diterima.
-        const payload = crypto.randomUUID();
-        const invoicePayload = JSON.stringify({
-            uuid: payload,
-            bankDetails: bankDetails
-        });
-        
-        const invoiceTitle = "Penukaran Crypto ke Rupiah";
+        const { amount, cryptoAmount, cryptoType, bankDetails, walletAddress, initData } = req.body;
 
-        if (!BOT_TOKEN) {
-            return res.status(500).json({ error: 'Bot token tidak ditemukan.' });
+        // Validasi data
+        if (!amount || !cryptoAmount || !cryptoType || !bankDetails || !walletAddress) {
+            return res.status(400).json({ error: 'Data tidak lengkap' });
         }
 
-        // URL API untuk membuat invoice
-        const url = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
-        
-        // Data yang dikirim ke Telegram
-        const telegramPayload = {
-            title: invoiceTitle,
-            description: description,
-            payload: invoicePayload, // Menggunakan payload yang lebih rinci
-            currency: INVOICE_CURRENCY,
-            prices: [{ label: 'Jumlah', amount: amount }]
+        // Validasi initData (opsional, untuk keamanan)
+        if (initData && BOT_TOKEN) {
+            if (!validateInitData(JSON.parse(initData), BOT_TOKEN)) {
+                return res.status(401).json({ error: 'Invalid initData' });
+            }
+        }
+
+        // Payload unik untuk melacak transaksi
+        const payload = crypto.randomUUID();
+
+        // Simpan detail transaksi (opsional, bisa ke database seperti MongoDB)
+        const transaction = {
+            address: TON_WALLET_ADDRESS, // Alamat TON untuk menerima pembayaran
+            amount: cryptoAmount,
+            idrAmount: amount,
+            cryptoType,
+            bankDetails,
+            walletAddress,
+            payload,
+            createdAt: new Date()
         };
 
-        const response = await axios.post(url, telegramPayload);
-        
-        // Tambahkan baris log ini untuk debugging
-        console.log('Respons dari Telegram:', response.data);
+        console.log('Transaksi yang dibuat:', transaction);
 
-        const invoiceUrl = response.data.result;
-        res.json({ invoiceUrl });
-
+        // Kembalikan alamat wallet tujuan untuk transaksi TON
+        res.status(200).json({ transaction });
     } catch (error) {
-        console.error('Error saat membuat invoice:', error.response ? error.response.data : error.message);
-        res.status(500).json({ error: 'Gagal membuat invoice.' });
+        console.error('Error saat membuat transaksi:', error.message);
+        res.status(500).json({ error: 'Gagal membuat transaksi.' });
     }
 });
 
-// Endpoint untuk menerima notifikasi pembayaran (webhook)
+// Hapus atau ubah endpoint webhook (opsional)
+// Jika ingin memverifikasi transaksi di blockchain TON, tambahkan logika di bawah
+/*
 app.post('/webhook', (req, res) => {
     const update = req.body;
-    
-    if (update.message && update.message.successful_payment) {
-        // Pembayaran berhasil! Ini adalah inti dari sistem kita.
-        const payment = update.message.successful_payment;
-        const invoicePayload = JSON.parse(payment.invoice_payload);
-        
-        console.log('Pembayaran berhasil! Detail:', payment);
-        console.log('Nomor Rekening:', invoicePayload.bankDetails.accountNumber);
-        console.log('Nama Pemilik:', invoicePayload.bankDetails.accountName);
-        console.log('Nama Bank:', invoicePayload.bankDetails.bankName);
-        
-        // Di sini kamu akan menambahkan logika untuk mengirim Rupiah ke rekening pengguna
-        // ... Logika untuk transfer uang ...
-
-        // Kirim respons sukses ke Telegram
-        res.status(200).send('OK');
-    } else {
-        // Jika bukan webhook pembayaran, tetap kirim OK
-        res.status(200).send('OK');
-    }
+    // Logika untuk memverifikasi transaksi TON di blockchain (membutuhkan API seperti Toncenter)
+    console.log('Webhook diterima:', update);
+    res.status(200).send('OK');
 });
+*/
 
 app.listen(port, () => {
     console.log(`Server berjalan di http://localhost:${port}`);
 });
+
+module.exports = app; // Untuk Vercel
