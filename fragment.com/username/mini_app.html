@@ -58,7 +58,13 @@
         const username = getUsernameFromTitle();
         updatePageContent(username);
       });
-    </script>
+
+    // Inisialisasi TonConnect
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: 'https://nama-proyek-anda.vercel.app/tonconnect-manifest.json',
+        restoreConnection: true
+         });
+</script>
 </head>
 <body class="emoji_image no-transition">
     <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;left:-10000px">
